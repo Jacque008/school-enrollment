@@ -113,7 +113,7 @@
 .level-label {
   font-size: 28rpx;
   color: #666;
-  width: 180rpx;
+  width: 300rpx;
   flex-shrink: 0;
 }
 

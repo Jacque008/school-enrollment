@@ -164,8 +164,16 @@ Page({
     const { step, student, guardian, schedule } = this.data;
     switch (step) {
       case 1:
-        if (!student.name || !student.birth_date || !student.city_region) {
-          this.setData({ error: '请填写所有必填项' });
+        if (!student.name.trim()) {
+          this.setData({ error: '请填写姓名' });
+          return false;
+        }
+        if (!student.birth_date) {
+          this.setData({ error: '请选择出生年月' });
+          return false;
+        }
+        if (!student.city_region.trim()) {
+          this.setData({ error: '请填写所在城市或地区' });
           return false;
         }
         break;
