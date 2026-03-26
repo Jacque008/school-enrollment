@@ -14,11 +14,5 @@
       "src": "/(.*)",
       "dest": "backend/app/main.py"
     }
-  ],
-  "env": {
-    "PLACEMENT_DATABASE_URL": "@placement_database_url",
-    "PLACEMENT_JWT_SECRET_KEY": "@placement_jwt_secret_key",
-    "PLACEMENT_WECHAT_APP_ID": "@placement_wechat_app_id",
-    "PLACEMENT_WECHAT_APP_SECRET": "@placement_wechat_app_secret"
-  }
+  ]
 }
