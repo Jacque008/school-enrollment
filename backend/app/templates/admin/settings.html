@@ -1,0 +1,184 @@
+{% extends "admin/base.html" %}
+{% block title %}系统常数 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h4 class="mb-0 fw-bold">系统常数维护</h4>
+</div>
+
+<div class="row g-4">
+
+  <!-- Fee & capacity constants -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header fw-semibold bg-white border-bottom">学费基数 & 班级容量</div>
+      <div class="card-body p-4">
+        <form method="post" action="/admin/settings">
+          <div class="row g-3 mb-4">
+            <div class="col-12"><h6 class="text-muted mb-2">班级容量默认值</h6></div>
+            <div class="col-md-6">
+              <label class="form-label">标准人数</label>
+              <div class="input-group">
+                <input type="number" name="default_capacity" class="form-control"
+                       value="{{ cfg.default_capacity }}" min="1" max="50">
+                <span class="input-group-text">人</span>
+              </div>
+              <small class="text-muted">新建班级时的默认值</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">超员上限</label>
+              <div class="input-group">
+                <input type="number" name="default_overflow_cap" class="form-control"
+                       value="{{ cfg.default_overflow_cap }}" min="1" max="60">
+                <span class="input-group-text">人</span>
+              </div>
+              <small class="text-muted">新建班级时的默认值</small>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-12"><h6 class="text-muted mb-2">学费基数（每人/学期）</h6></div>
+            <div class="col-md-4">
+              <label class="form-label">实体课</label>
+              <div class="input-group">
+                <input type="number" name="fee_onsite" class="form-control"
+                       value="{{ cfg.fee_onsite }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">实体启蒙班（L1-L2）</label>
+              <div class="input-group">
+                <input type="number" name="fee_beginner" class="form-control"
+                       value="{{ cfg.fee_beginner }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">网课 / 迷你课</label>
+              <div class="input-group">
+                <input type="number" name="fee_online" class="form-control"
+                       value="{{ cfg.fee_online }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-12"><h6 class="text-muted mb-2">家庭多子女优惠（整体减免）</h6></div>
+            <div class="col-md-4">
+              <label class="form-label">2子女</label>
+              <div class="input-group">
+                <input type="number" name="discount_2" class="form-control"
+                       value="{{ cfg.discount_2 }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">3子女</label>
+              <div class="input-group">
+                <input type="number" name="discount_3" class="form-control"
+                       value="{{ cfg.discount_3 }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">4子女及以上</label>
+              <div class="input-group">
+                <input type="number" name="discount_4" class="form-control"
+                       value="{{ cfg.discount_4 }}" min="0">
+                <span class="input-group-text">kr</span>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">保存常数</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teacher family -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header fw-semibold bg-white border-bottom">教师子女（免收学费）</div>
+      <div class="card-body p-3">
+        <p class="text-muted small mb-2">标记后该家长所有子女学费自动设为 0。</p>
+
+        <!-- Currently marked families -->
+        {% set teacher_count = namespace(n=0) %}
+        {% for g in guardians %}{% if teacher_flags.get(g.id) %}{% set teacher_count.n = teacher_count.n + 1 %}
+        <div class="d-flex align-items-center justify-content-between border rounded px-3 py-2 mb-2 bg-light">
+          <div>
+            <span class="fw-medium">{{ g.name }}</span>
+            <span class="text-muted small ms-2">
+              {% for s in g.students %}{{ s.name }}{% if not loop.last %}、{% endif %}{% endfor %}
+            </span>
+          </div>
+          <form method="post" action="/admin/settings/teacher-family" class="ms-2">
+            <input type="hidden" name="guardian_id" value="{{ g.id }}">
+            <input type="hidden" name="is_teacher" value="off">
+            <button class="btn btn-sm btn-outline-danger py-0 px-2">移除</button>
+          </form>
+        </div>
+        {% endif %}{% endfor %}
+        {% if teacher_count.n == 0 %}
+        <p class="text-muted small text-center py-2">暂无教师家庭</p>
+        {% endif %}
+
+        <!-- Add by search -->
+        <div class="mt-3 border-top pt-3">
+          <form method="post" action="/admin/settings/teacher-family" class="d-flex gap-2" id="addTeacherForm">
+            <input type="hidden" name="is_teacher" value="on">
+            <input type="hidden" name="guardian_id" id="selectedGuardianId">
+            <input type="text" id="guardianSearch" class="form-control form-control-sm"
+                   placeholder="搜索家长姓名…" autocomplete="off" style="flex:1">
+            <button type="submit" class="btn btn-sm btn-primary" id="addTeacherBtn" disabled>添加</button>
+          </form>
+          <div id="guardianDropdown" class="border rounded shadow-sm bg-white mt-1"
+               style="display:none;max-height:200px;overflow-y:auto;position:relative;z-index:10"></div>
+        </div>
+
+        <script>
+        (function(){
+          const data = [
+            {% for g in guardians %}{% if not teacher_flags.get(g.id) %}
+            {id:{{ g.id }}, name:"{{ g.name }}", children:"{% for s in g.students %}{{ s.name }}{% if not loop.last %}、{% endif %}{% endfor %}"},
+            {% endif %}{% endfor %}
+          ];
+          const inp = document.getElementById('guardianSearch');
+          const drop = document.getElementById('guardianDropdown');
+          const hidId = document.getElementById('selectedGuardianId');
+          const btn = document.getElementById('addTeacherBtn');
+
+          inp.addEventListener('input', () => {
+            const q = inp.value.trim();
+            hidId.value = ''; btn.disabled = true;
+            if (!q) { drop.style.display='none'; return; }
+            const hits = data.filter(g => g.name.includes(q)).slice(0, 10);
+            if (!hits.length) { drop.style.display='none'; return; }
+            drop.innerHTML = hits.map(g =>
+              `<div class="px-3 py-2 border-bottom" style="cursor:pointer" data-id="${g.id}" data-name="${g.name}">
+                <span class="fw-medium">${g.name}</span>
+                <span class="text-muted small ms-2">${g.children}</span>
+              </div>`
+            ).join('');
+            drop.style.display = 'block';
+            drop.querySelectorAll('div').forEach(el => {
+              el.addEventListener('mousedown', e => {
+                e.preventDefault();
+                inp.value = el.dataset.name;
+                hidId.value = el.dataset.id;
+                btn.disabled = false;
+                drop.style.display = 'none';
+              });
+            });
+          });
+          inp.addEventListener('blur', () => setTimeout(() => drop.style.display='none', 150));
+        })();
+        </script>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

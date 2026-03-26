@@ -1,0 +1,30 @@
+<div class="row g-3">
+  <div class="col-12">
+    <label class="form-label">学期号（名称）</label>
+    <input type="text" name="name" class="form-control" placeholder="例：2025春季" required>
+  </div>
+  <div class="col-6">
+    <label class="form-label">开学日期</label>
+    <input type="date" name="start_date" class="form-control" required>
+  </div>
+  <div class="col-6">
+    <label class="form-label">结业日期</label>
+    <input type="date" name="end_date" class="form-control" required>
+  </div>
+  <div class="col-6">
+    <label class="form-label">报名开放日期</label>
+    <input type="date" name="reg_open_date" class="form-control" required>
+  </div>
+  <div class="col-6">
+    <label class="form-label">报名截止日期</label>
+    <input type="date" name="reg_close_date" class="form-control" required>
+  </div>
+  <div class="col-6">
+    <label class="form-label">总持续周数</label>
+    <input type="number" name="total_weeks" class="form-control" min="1" max="52" placeholder="例：18">
+  </div>
+  <div class="col-6">
+    <label class="form-label">假期周数 <small class="text-muted">（逗号分隔，例：4,8,12）</small></label>
+    <input type="text" name="holiday_weeks" class="form-control" placeholder="例：4,8,12">
+  </div>
+</div>

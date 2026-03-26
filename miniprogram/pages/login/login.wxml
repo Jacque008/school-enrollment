@@ -1,0 +1,22 @@
+<view class="container">
+  <image class="logo" src="/images/logo.png" mode="aspectFit" />
+  <text class="title">行知学堂</text>
+  <text class="subtitle">新生报名系统</text>
+
+  <view wx:if="{{error}}" class="error-box">
+    <text>{{error}}</text>
+  </view>
+
+  <button
+    class="login-btn"
+    type="primary"
+    loading="{{loading}}"
+    bindtap="onLogin"
+  >
+    微信一键登录
+  </button>
+
+  <text class="privacy">
+    登录即表示同意《隐私政策》
+  </text>
+</view>

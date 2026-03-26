@@ -1,0 +1,255 @@
+<view class="container">
+  <!-- Progress bar -->
+  <view class="progress-bar">
+    <view class="progress-fill" style="width: {{step / totalSteps * 100}}%"></view>
+  </view>
+  <text class="step-label">第 {{step}} 步 / 共 {{totalSteps}} 步</text>
+
+  <!-- Error message -->
+  <view wx:if="{{error}}" class="error-box">
+    <text>{{error}}</text>
+  </view>
+
+  <!-- Step 1: Student Info -->
+  <view wx:if="{{step === 1}}" class="step-content">
+    <text class="step-title">学生基本信息</text>
+
+    <view class="field">
+      <text class="label">姓名 *</text>
+      <input class="input" placeholder="请输入" data-field="name" bindinput="onStudentInput" value="{{student.name}}" />
+    </view>
+    <view class="field">
+      <text class="label">性别 *</text>
+      <radio-group bindchange="onGenderChange">
+        <radio value="0" checked="{{student.gender === 'male'}}">男</radio>
+        <radio value="1" checked="{{student.gender === 'female'}}">女</radio>
+      </radio-group>
+    </view>
+    <view class="field">
+      <text class="label">出生年月 *</text>
+      <picker mode="date" fields="month" bindchange="onBirthDateChange" value="{{student.birth_date}}">
+        <view class="picker-view">{{student.birth_date || '请选择'}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <text class="label">所在城市或地区 *</text>
+      <input class="input" placeholder="如 Sollentuna" data-field="city_region" bindinput="onStudentInput" value="{{student.city_region}}" />
+    </view>
+    <view class="field">
+      <text class="label">国籍（选填）</text>
+      <input class="input" placeholder="如 中国、瑞典" data-field="nationality" bindinput="onStudentInput" value="{{student.nationality}}" />
+    </view>
+    <view class="field">
+      <text class="label required-label">家庭主要使用语言 *</text>
+      <view class="option-group">
+        <view
+          wx:for="{{languageOptions}}" wx:key="value"
+          class="option-btn {{background.home_language === item.value ? 'option-btn-active' : ''}}"
+          bindtap="onLanguageChange" data-value="{{item.value}}" data-label="{{item.label}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">是否有兄弟姐妹在学堂</text>
+      <switch bindchange="onSiblingChange" checked="{{hasSibling}}" />
+    </view>
+    <view wx:if="{{hasSibling}}" class="field">
+      <text class="label">兄弟姐妹信息</text>
+      <view wx:for="{{siblings}}" wx:key="index" class="sibling-row">
+        <input class="sibling-input" placeholder="姓名" data-index="{{index}}" data-field="name"
+               bindinput="onSiblingInput" value="{{item.name}}" />
+        <input class="sibling-input" placeholder="班级（选填）" data-index="{{index}}" data-field="class_name"
+               bindinput="onSiblingInput" value="{{item.class_name}}" />
+        <view class="sibling-remove" bindtap="onRemoveSibling" data-index="{{index}}">✕</view>
+      </view>
+      <view class="add-sibling-btn" bindtap="onAddSibling">+ 再添加一位</view>
+    </view>
+  </view>
+
+  <!-- Step 2: Guardian Info -->
+  <view wx:if="{{step === 2}}" class="step-content">
+    <text class="step-title">监护人信息</text>
+
+    <view class="field">
+      <text class="label">监护人姓名 *</text>
+      <input class="input" placeholder="请输入" data-field="name" bindinput="onGuardianInput" value="{{guardian.name}}" />
+    </view>
+    <view class="field">
+      <text class="label required-label">与孩子关系 *</text>
+      <view class="option-group">
+        <view
+          wx:for="{{relationshipOptions}}" wx:key="value"
+          class="option-btn {{guardian.relationship_to_child === item.value ? 'option-btn-active' : ''}}"
+          bindtap="onRelationshipChange" data-value="{{item.value}}" data-label="{{item.label}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">邮箱（选填）</text>
+      <input class="input" type="email" placeholder="请输入" data-field="email" bindinput="onGuardianInput" value="{{guardian.email}}" />
+    </view>
+    <view class="field">
+      <text class="label">手机号（选填）</text>
+      <input class="input" type="number" placeholder="如 +46701234567" data-field="phone" bindinput="onGuardianInput" value="{{guardian.phone}}" />
+    </view>
+    <view class="field">
+      <text class="label">微信号 *</text>
+      <text class="field-hint">用于加入班级家长群，请填写微信号（非昵称）</text>
+      <input class="input" placeholder="请输入微信号" data-field="wechat_id" bindinput="onGuardianInput" value="{{guardian.wechat_id}}" />
+    </view>
+    <view class="field">
+      <text class="label">国籍（选填）</text>
+      <input class="input" placeholder="如 中国、瑞典" data-field="nationality" bindinput="onGuardianInput" value="{{guardian.nationality}}" />
+    </view>
+    <view class="field">
+      <text class="label">主要使用语言（选填）</text>
+      <input class="input" placeholder="如 普通话、瑞典语" data-field="language" bindinput="onGuardianInput" value="{{guardian.language}}" />
+    </view>
+  </view>
+
+  <!-- Step 3: Schedule Preferences -->
+  <view wx:if="{{step === 3}}" class="step-content">
+    <text class="step-title">课程时段偏好（可多选）</text>
+    <text class="hint">请选择您希望的上课时段，可以多选</text>
+
+    <view wx:for="{{slotOptions}}" wx:key="value" class="checkbox-item" bindtap="onSlotToggle" data-value="{{item.value}}">
+      <view class="checkbox {{slotSelected[item.value] ? 'checked' : ''}}">
+        <text wx:if="{{slotSelected[item.value]}}">✓</text>
+      </view>
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- Step 4: Proficiency -->
+  <view wx:if="{{step === 4}}" class="step-content">
+    <text class="step-title">中文水平自评</text>
+
+    <view class="field">
+      <text class="label">听力水平</text>
+      <radio-group bindchange="onListeningChange">
+        <view wx:for="{{listeningOptions}}" wx:key="index" class="radio-item">
+          <radio value="{{index}}" checked="{{proficiency.listening_level === index + 1}}">{{item}}</radio>
+        </view>
+      </radio-group>
+    </view>
+
+    <view class="field">
+      <text class="label">口语水平</text>
+      <radio-group bindchange="onSpeakingChange">
+        <view wx:for="{{speakingOptions}}" wx:key="index" class="radio-item">
+          <radio value="{{index}}" checked="{{proficiency.speaking_level === index + 1}}">{{item}}</radio>
+        </view>
+      </radio-group>
+    </view>
+
+    <view class="field">
+      <text class="label">书写水平</text>
+      <radio-group bindchange="onWritingChange">
+        <view wx:for="{{writingOptions}}" wx:key="index" class="radio-item">
+          <radio value="{{index}}" checked="{{proficiency.writing_level === index + 1}}">{{item}}</radio>
+        </view>
+      </radio-group>
+    </view>
+  </view>
+
+  <!-- Step 5: Literacy -->
+  <view wx:if="{{step === 5}}" class="step-content">
+    <text class="step-title">识字量和阅读能力</text>
+
+    <view class="field">
+      <text class="label">拼音</text>
+      <radio-group bindchange="onPinyinChange">
+        <view wx:for="{{pinyinOptions}}" wx:key="index" class="radio-item">
+          <radio value="{{index}}" checked="{{literacy.pinyin_level === index + 1}}">{{item}}</radio>
+        </view>
+      </radio-group>
+    </view>
+
+    <view class="field">
+      <text class="label">识字量</text>
+      <radio-group bindchange="onVocabChange">
+        <view wx:for="{{vocabOptions}}" wx:key="index" class="radio-item">
+          <radio value="{{index}}" checked="{{literacy.vocab_level === index + 1}}">{{item}}</radio>
+        </view>
+      </radio-group>
+    </view>
+
+    <view class="field">
+      <text class="label">阅读能力</text>
+      <radio-group bindchange="onReadingAbilityChange">
+        <view class="radio-item">
+          <radio value="0" checked="{{literacy.reading_ability === 'independent'}}">自己有能力读</radio>
+        </view>
+        <view class="radio-item">
+          <radio value="1" checked="{{literacy.reading_ability === 'needs_help'}}">必须要家长陪伴或帮助</radio>
+        </view>
+      </radio-group>
+    </view>
+    
+    <view class="field">
+      <text class="label">阅读兴趣（多选）</text>
+      <view wx:for="{{readingInterestOptions}}" wx:key="index" class="checkbox-item" bindtap="onReadingInterestToggle" data-value="{{item}}">
+        <view class="checkbox {{interestSelected[item] ? 'checked' : ''}}">
+          <text wx:if="{{interestSelected[item]}}">✓</text>
+        </view>
+        <text>{{item}}</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">阅读习惯（多选）</text>
+      <view wx:for="{{readingHabitOptions}}" wx:key="index" class="checkbox-item" bindtap="onReadingHabitToggle" data-value="{{item}}">
+        <view class="checkbox {{habitSelected[item] ? 'checked' : ''}}">
+          <text wx:if="{{habitSelected[item]}}">✓</text>
+        </view>
+        <text>{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Step 6: Background -->
+  <view wx:if="{{step === 6}}" class="step-content">
+    <text class="step-title">学习背景和期待</text>
+
+    <view class="field">
+      <text class="label">中文学习经历和兴趣点</text>
+      <textarea class="textarea textarea-sm" placeholder="请简要描述" data-field="learning_history" bindinput="onBackgroundInput" value="{{background.learning_history}}" />
+    </view>
+    <view class="field">
+      <text class="label">其它兴趣爱好</text>
+      <textarea class="textarea textarea-sm" placeholder="请简要描述" data-field="other_hobbies" bindinput="onBackgroundInput" value="{{background.other_hobbies}}" />
+    </view>
+    <view class="field">
+      <text class="label">对孩子学中文的期待</text>
+      <textarea class="textarea textarea-sm" placeholder="请简要描述" data-field="parent_expectations" bindinput="onBackgroundInput" value="{{background.parent_expectations}}" />
+    </view>
+    <view class="field">
+      <text class="label">对行知学堂的期待和建议</text>
+      <textarea class="textarea textarea-sm" placeholder="请简要描述" data-field="school_feedback" bindinput="onBackgroundInput" value="{{background.school_feedback}}" />
+    </view>
+    <view class="field">
+      <text class="label">其他备注（如希望跟某同学同班）</text>
+      <textarea class="textarea textarea-sm" placeholder="选填" data-field="other_notes" bindinput="onBackgroundInput" value="{{background.other_notes}}" />
+    </view>
+    <view class="field">
+      <text class="label">如何得知行知学堂</text>
+      <input class="input" placeholder="如朋友推荐、社交媒体..." data-field="referral_source" bindinput="onBackgroundInput" value="{{background.referral_source}}" />
+    </view>
+    <view class="field">
+      <text class="label">首选时段满员时是否接受调剂</text>
+      <switch bindchange="onAcceptAlternativeChange" checked="{{background.accept_alternative}}" />
+    </view>
+  </view>
+
+  <!-- Navigation buttons -->
+  <view class="nav-buttons">
+    <button wx:if="{{step > 1}}" bindtap="prevStep" class="btn-secondary">上一步</button>
+    <button wx:if="{{step < totalSteps}}" bindtap="nextStep" class="btn-primary">下一步</button>
+    <button
+      wx:if="{{step === totalSteps}}"
+      bindtap="onSubmit"
+      class="btn-primary"
+      loading="{{loading}}"
+    >提交报名</button>
+  </view>
+</view>

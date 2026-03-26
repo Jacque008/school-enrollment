@@ -1,0 +1,227 @@
+{% extends "admin/base.html" %}
+{% block title %}家长列表 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-2">
+  <h4 class="mb-0 fw-bold">家长列表</h4>
+</div>
+<form class="d-flex gap-2 flex-wrap align-items-center mb-3" method="get" action="/admin/guardians">
+  <input type="text" name="search" class="form-control form-control-sm" placeholder="姓名" value="{{ search }}" style="width:120px">
+  <input type="text" name="f_contact" class="form-control form-control-sm" placeholder="邮箱/微信/电话" value="{{ f_contact }}" style="width:160px">
+  <select name="f_class" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部班级</option>
+    {% for cn in all_class_names %}
+      <option value="{{ cn }}" {% if f_class == cn %}selected{% endif %}>{{ cn }}</option>
+    {% endfor %}
+  </select>
+  <select name="f_children" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部子女数</option>
+    <option value="1"  {% if f_children=='1'  %}selected{% endif %}>1 个子女</option>
+    <option value="2"  {% if f_children=='2'  %}selected{% endif %}>2 个子女</option>
+    <option value="3"  {% if f_children=='3'  %}selected{% endif %}>3 个子女</option>
+    <option value="4+" {% if f_children=='4+' %}selected{% endif %}>4 个及以上</option>
+  </select>
+  <select name="f_gender" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部性别</option>
+    <option value="female" {% if f_gender=='female' %}selected{% endif %}>女</option>
+    <option value="male"   {% if f_gender=='male'   %}selected{% endif %}>男</option>
+  </select>
+  <button class="btn btn-outline-secondary btn-sm">筛选</button>
+  {% if search or f_contact or f_class or f_children or f_gender %}
+    <a href="/admin/guardians" class="btn btn-outline-secondary btn-sm">清除</a>
+  {% endif %}
+</form>
+
+<div class="table-card">
+  <div class="card-header">共 {{ guardians | length }} 位家长 <small class="text-muted ms-2">点击列标题排序</small></div>
+  <table class="table table-hover align-middle mb-0" id="sortTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">姓名 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">邮箱 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">性别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3">关系 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="4">微信号 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="5">电话 <span class="sort-icon">⇅</span></th>
+        <th style="min-width:100px">子女</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in guardians %}
+      <tr>
+        <td class="fw-medium">{{ g.name }}</td>
+        <td class="text-muted small">{{ g.email or '—' }}</td>
+        <td data-sort="{{ g.gender or '' }}">
+          {% if g.gender == 'male' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">男</span>
+          {% elif g.gender == 'female' %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">女</span>
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td>
+          {% if g.relationship_to_child == 'mom' or g.relationship_to_child == '妈妈' %}妈妈
+          {% elif g.relationship_to_child == 'dad' or g.relationship_to_child == '爸爸' %}爸爸
+          {% elif g.relationship_to_child %}{{ g.relationship_to_child }}
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td class="text-muted small">{{ g.wechat_id or '—' }}</td>
+        <td class="text-muted small">{{ g.phone or '—' }}</td>
+        <td style="min-width:100px; max-width:160px">
+          {% for s in g.students %}
+            {% set enrolled_class = namespace(name='') %}
+            {% for e in s.enrollments %}
+              {% if e.status == 'enrolled' and e.class_ %}
+                {% set enrolled_class.name = e.class_.name %}
+              {% endif %}
+            {% endfor %}
+            <div class="lh-sm mb-1">
+              <a href="/admin/enrolled-students?search={{ s.name }}" class="text-decoration-none fw-medium small">{{ s.name }}</a>
+              {% if enrolled_class.name %}
+                <div class="text-muted" style="font-size:11px">{{ enrolled_class.name }}</div>
+              {% endif %}
+            </div>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endfor %}
+        </td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-secondary"
+            data-bs-toggle="modal" data-bs-target="#editModal"
+            data-id="{{ g.id }}"
+            data-name="{{ g.name }}"
+            data-email="{{ g.email or '' }}"
+            data-gender="{{ g.gender or '' }}"
+            data-relationship="{{ g.relationship_to_child or '' }}"
+            data-wechat="{{ g.wechat_id or '' }}"
+            data-phone="{{ g.phone or '' }}"
+            data-nationality="{{ g.nationality or '' }}"
+            data-language="{{ g.language or '' }}"
+            data-notes="{{ g.notes or '' }}"
+          >编辑</button>
+          <form method="post" action="/admin/guardians/{{ g.id }}/delete" class="d-inline"
+                onsubmit="return confirm('确认删除家长 {{ g.name }}？此操作不可恢复。')">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">暂无家长数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" id="editForm" action="">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">编辑家长信息</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-6">
+            <label class="form-label">姓名 *</label>
+            <input type="text" name="name" id="edit-name" class="form-control" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label">关系</label>
+            <select name="relationship_to_child" id="edit-relationship" class="form-select">
+              <option value="">—</option>
+              <option value="mom">妈妈</option>
+              <option value="dad">爸爸</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">性别</label>
+            <select name="gender" id="edit-gender" class="form-select">
+              <option value="">—</option>
+              <option value="female">女</option>
+              <option value="male">男</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">邮箱</label>
+            <input type="email" name="email" id="edit-email" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label">手机号</label>
+            <input type="text" name="phone" id="edit-phone" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label">微信号</label>
+            <input type="text" name="wechat_id" id="edit-wechat" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label">国籍</label>
+            <input type="text" name="nationality" id="edit-nationality" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label">语言</label>
+            <input type="text" name="language" id="edit-language" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">备注</label>
+            <textarea name="notes" id="edit-notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Populate edit modal
+  document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('editForm').action = '/admin/guardians/' + btn.dataset.id + '/edit';
+    document.getElementById('edit-name').value = btn.dataset.name;
+    document.getElementById('edit-email').value = btn.dataset.email;
+    document.getElementById('edit-gender').value = btn.dataset.gender;
+    document.getElementById('edit-relationship').value = btn.dataset.relationship;
+    document.getElementById('edit-wechat').value = btn.dataset.wechat;
+    document.getElementById('edit-phone').value = btn.dataset.phone;
+    document.getElementById('edit-nationality').value = btn.dataset.nationality;
+    document.getElementById('edit-language').value = btn.dataset.language;
+    document.getElementById('edit-notes').value = btn.dataset.notes;
+  });
+
+  // Sort table
+  function natCmp(a, b) {
+    const re = /(\d+)|(\D+)/g;
+    const pa = String(a).match(re) || [], pb = String(b).match(re) || [];
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      if (i >= pa.length) return -1;
+      if (i >= pb.length) return 1;
+      const na = parseFloat(pa[i]), nb = parseFloat(pb[i]);
+      const c = (!isNaN(na) && !isNaN(nb)) ? na - nb : pa[i].localeCompare(pb[i], 'zh');
+      if (c !== 0) return c;
+    }
+    return 0;
+  }
+  const t = document.getElementById('sortTable'); let sc = -1, sa = true;
+  t.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer'; th.style.userSelect = 'none';
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (sc === col) { sa = !sa; } else { sc = col; sa = true; }
+      const tb = t.querySelector('tbody');
+      const rows = Array.from(tb.querySelectorAll('tr')).filter(r => r.cells.length > 1);
+      rows.sort((a, b) => {
+        const va = (a.cells[col].dataset.sort ?? a.cells[col].textContent).trim();
+        const vb = (b.cells[col].dataset.sort ?? b.cells[col].textContent).trim();
+        return sa ? natCmp(va, vb) : natCmp(vb, va);
+      });
+      rows.forEach(r => tb.appendChild(r));
+      t.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.textContent = '⇅');
+      th.querySelector('.sort-icon').textContent = sa ? '↑' : '↓';
+    });
+  });
+})();
+</script>
+{% endblock %}

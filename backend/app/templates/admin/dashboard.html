@@ -1,0 +1,465 @@
+{% extends "admin/base.html" %}
+{% block title %}汇总统计 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4 class="mb-0 fw-bold">汇总统计</h4>
+    <small class="text-muted">{% if semester %}当前学期：{{ semester.name }}{% else %}暂无激活学期{% endif %}</small>
+  </div>
+</div>
+
+{% if current_admin and current_admin.role == 'teacher' %}
+{# ── Teacher view: show their own class(es) as cards ── #}
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="stat-card" style="border-left:4px solid #e83e8c">
+      {% if current_lesson is not none %}
+      <div class="d-flex align-items-baseline gap-2">
+        <span class="text-muted small">本周将进行</span>
+        <span class="fw-bold fs-4" style="color:#e83e8c">第 {{ current_lesson }} 课</span>
+      </div>
+      {% elif semester %}
+      <div class="d-flex align-items-baseline gap-2">
+        <span class="text-muted small">学期未开始</span>
+        <span class="fw-bold fs-5 text-muted">{{ semester.start_date.strftime('%m/%d') }} 开学</span>
+      </div>
+      {% else %}
+      <div class="text-muted small">暂无激活学期</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for cls in classes %}
+  {% set mod_label = '实体' if cls.modality == 'onsite' else ('迷你' if cls.modality == 'mini' else '网课') %}
+  {% set mod_color = '#155724' if cls.modality == 'onsite' else ('#332f06' if cls.modality == 'mini' else '#7c3a00') %}
+  {% set mod_bg = '#d4edda' if cls.modality == 'onsite' else ('#fdce14' if cls.modality == 'mini' else '#ffe8d0') %}
+  {% set day_label = '周六' if cls.schedule_day == 'SAT' else '周日' %}
+  {% set h = cls.schedule_time.hour if cls.schedule_time else 0 %}
+  {% set period_label = '上午' if h < 11 else ('中午' if h < 14 else '下午') %}
+  {% set actual = enrolled_counts.get(cls.id, 0) %}
+  <div class="col-md-4">
+    <a href="/admin/classes/{{ cls.id }}/edit" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid {{ mod_color }}">
+        <div class="d-flex align-items-start justify-content-between mb-1">
+          <span class="fw-bold fs-6">{{ cls.name }}</span>
+          <span class="badge" style="background:{{ mod_bg }};color:{{ mod_color }}">{{ mod_label }}</span>
+        </div>
+        <div class="text-muted small mb-1">{{ day_label }} · {{ cls.schedule_time.strftime('%H:%M') }} {{ period_label }}</div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="fw-bold">{{ actual }} / {{ cls.capacity }}</span>
+          <div class="capacity-bar flex-grow-1">
+            <div class="capacity-fill" style="width:{{ [actual * 100 // cls.capacity if cls.capacity else 0, 100] | min }}%;background:{{ mod_color }}"></div>
+          </div>
+          <span class="text-muted small">人</span>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="alert alert-info">暂无分配班级，请联系超级管理员</div></div>
+  {% endfor %}
+</div>
+
+{% else %}
+{# ── Admin view: aggregate stats ── #}
+<!-- Row 1: People stats -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <a href="/admin/enrolled-students" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid #0d6efd">
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">在读学生</span>
+          <span class="fw-bold fs-4 text-primary">{{ enrolled_count }}</span>
+          <span class="text-muted small">人</span>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="/admin/pending-students" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid #fd7e14">
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">本学期新增</span>
+          <span class="fw-bold fs-4 text-warning">{{ new_students_count }}</span>
+          <span class="text-muted small">人，待分班 {{ unplaced }} 人</span>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="/admin/teachers" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid #20c997">
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">在职教师</span>
+          <span class="fw-bold fs-4 text-success">{{ teacher_count }}</span>
+          <span class="text-muted small">人</span>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="/admin/semesters" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid #e83e8c">
+        {% if current_lesson is not none %}
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">本周将进行</span>
+          <span class="fw-bold fs-4" style="color:#e83e8c">第 {{ current_lesson }} 课</span>
+        </div>
+        {% elif semester %}
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">学期未开始</span>
+          <span class="fw-bold fs-5 text-muted">{{ semester.start_date.strftime('%m/%d') }} 开学</span>
+        </div>
+        {% else %}
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="text-muted small">本周将进行</span>
+          <span class="fw-bold fs-4 text-muted">—</span>
+        </div>
+        {% endif %}
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Row 2: Class stats by time slot -->
+{% set online_total = sat_online.total + sun_online.total %}
+{% set onsite_total = onsite.am + onsite.noon + onsite.pm %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+      <div class="stat-card" style="border-left:4px solid #6f42c1;background:#f8f5ff">
+        <div class="text-muted small mb-1">实体 · 共&nbsp&nbsp&nbsp
+        <span class="fw-bold fs-4" style="color:#6f42c1">{{ onsite_total }} </span>
+        <span class="text-muted small">&nbsp&nbsp&nbsp班</span></div>
+        <div class="d-flex align-items-baseline gap-1">
+          <a href="/admin/classes?f_modality=onsite" class="text-decoration-none">
+            <div class="text-muted small">上午
+              <span class="fw-bold fs-4" style="color:#6f42c1">{{ onsite.am }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+
+          <a href="/admin/classes?f_modality=onsite" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp中午
+              <span class="fw-bold fs-4" style="color:#6f42c1">{{ onsite.noon }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+
+          <a href="/admin/classes?f_modality=onsite" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp下午
+              <span class="fw-bold fs-4" style="color:#6f42c1">{{ onsite.pm }} </span>
+              <span class="text-muted small">班</span>
+            </div>
+          </a>
+        </div>
+      </div>
+  </div>
+  
+
+<div class="col-md-3">
+      <div class="stat-card" style="border-left:4px solid #fd7e14;background:#fff8f0">
+        <div class="text-muted small mb-1">网课 · 周六&nbsp&nbsp&nbsp
+        <span class="fw-bold fs-4" style="color:#fd7e14">{{ sat_online.total }} </span>
+        <span class="text-muted small">&nbsp&nbsp&nbsp班</span></div>
+        <div class="d-flex align-items-baseline gap-1">
+          <a href="/admin/classes?f_modality=online&f_day=sat" class="text-decoration-none">
+            <div class="text-muted small">上午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sat_online.am }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+          <a href="/admin/classes?f_modality=online&f_day=sat" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp中午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sat_online.noon }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+          <a href="/admin/classes?f_modality=online&f_day=sat" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp下午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sat_online.pm }} </span>
+              <span class="text-muted small">班</span>
+            </div>
+          </a>
+        </div>
+      </div>
+  </div>
+  <div class="col-md-3">
+      <div class="stat-card" style="border-left:4px solid #fd7e14;background:#fff8f0">
+        <div class="text-muted small mb-1">网课 · 周日&nbsp&nbsp&nbsp
+        <span class="fw-bold fs-4" style="color:#fd7e14">{{ sun_online.total }} </span>
+        <span class="text-muted small">&nbsp&nbsp&nbsp班</span></div>
+        <div class="d-flex align-items-baseline gap-1">
+          <a href="/admin/classes?f_modality=online&f_day=sun" class="text-decoration-none">
+            <div class="text-muted small">上午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sun_online.am }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+          <a href="/admin/classes?f_modality=online&f_day=sun" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp中午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sun_online.noon }} </span>
+              <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+            </div>
+          </a>
+          <a href="/admin/classes?f_modality=online&f_day=sun" class="text-decoration-none">
+            <div class="text-muted small">&nbsp&nbsp&nbsp下午
+              <span class="fw-bold fs-4" style="color:#fd7e14">{{ sun_online.pm }} </span>
+              <span class="text-muted small">班</span>
+            </div>
+          </a>
+        </div>
+      </div>
+  </div>
+  <div class="col-md-3">
+    <a href="/admin/classes?f_modality=mini" class="text-decoration-none">
+      <div class="stat-card" style="border-left:4px solid #20c997;background:#f0fff8">
+        <div class="text-muted small mb-1">迷你 · 共&nbsp&nbsp&nbsp
+        <span class="fw-bold fs-4" style="color:#20c997">{{ mini.total }} </span>
+        <span class="text-muted small">&nbsp&nbsp&nbsp班</span></div>
+        <div class="d-flex align-items-baseline gap-1">
+          <div class="text-muted small">1v1
+            <span class="fw-bold fs-4" style="color:#20c997">{{ mini["1v1"] }} </span>
+            <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+          </div>
+          <div class="text-muted small">&nbsp&nbsp&nbsp1v2
+            <span class="fw-bold fs-4" style="color:#20c997">{{ mini["1v2"] }} </span>
+            <span class="text-muted small">班&nbsp&nbsp&nbsp</span>
+          </div>
+          <div class="text-muted small">&nbsp&nbsp&nbsp1v3
+            <span class="fw-bold fs-4" style="color:#20c997">{{ mini["1v3"] }} </span>
+            <span class="text-muted small">班</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Class table -->
+<div class="table-card">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span>班级详情一览 <small class="text-muted fw-normal ms-1">点击列标题多列排序</small></span>
+    <div class="d-flex gap-2 align-items-center">
+      <button id="clearSort" class="btn btn-sm btn-outline-secondary">清除排序</button>
+      {% if not (current_admin and current_admin.role == 'teacher') %}
+      <button id="toggleFilter" class="btn btn-sm btn-outline-secondary">筛选</button>
+      <a href="/admin/classes" class="btn btn-sm btn-outline-primary">管理班级</a>
+      {% endif %}
+    </div>
+  </div>
+  <table class="table table-hover align-middle mb-0" id="dashClassTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">班级名称 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">授课方式 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">上课日 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3">时段 <span class="sort-icon">⇅</span></th>
+        <th data-col="4">教材</th>
+        <th data-col="5">教师</th>
+        <th class="sortable" data-col="6">实际 / 容量 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="7">状态 <span class="sort-icon">⇅</span></th>
+      </tr>
+      {% if not (current_admin and current_admin.role == 'teacher') %}
+      <tr id="filterRow" style="display:none">
+        <td><input class="form-control form-control-sm filter-input" data-col="0" placeholder="筛选名称..."></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="1" placeholder="实体/网课/迷你"></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="2" placeholder="周六/周日"></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="3" placeholder="上午/中午/下午"></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="4" placeholder="教材..."></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="5" placeholder="教师..."></td>
+        <td><input class="form-control form-control-sm filter-input" data-col="6" placeholder="如 ≥10"></td>
+        <td>
+          <select class="form-select form-select-sm filter-input" data-col="7">
+            <option value="">全部</option>
+            <option value="开放">开放</option>
+            <option value="已满">已满</option>
+            <option value="关闭">关闭</option>
+          </select>
+        </td>
+      </tr>
+      {% endif %}
+    </thead>
+    <tbody>
+      {% for cls in classes %}
+      {% set day_label = '周六' if cls.schedule_day == 'SAT' else '周日' %}
+      {% set mod_label = '实体' if cls.modality == 'onsite' else ('迷你' if cls.modality == 'mini' else '网课') %}
+      {% set h = cls.schedule_time.hour if cls.schedule_time else 0 %}
+      {% set period_label = '上午' if h < 11 else ('中午' if h < 14 else '下午') %}
+      {% set actual = enrolled_counts.get(cls.id, 0) %}
+      <tr>
+        <td class="fw-medium">{{ cls.name }}</td>
+        <td data-sort="{{ cls.modality }}">
+          <span class="badge" style="{% if cls.modality == 'onsite' %}background:#d4edda;color:#155724{% elif cls.modality == 'mini' %}background:#fdce14;color:#332f06{% else %}background:#ffe8d0;color:#7c3a00{% endif %}">{{ mod_label }}</span>
+        </td>
+        <td data-sort="{{ cls.schedule_day }}"><small class="text-muted">{{ day_label }}</small></td>
+        <td data-sort="{{ cls.schedule_time.strftime('%H%M') if cls.schedule_time else '0000' }}">
+          <small class="text-muted">{{ cls.schedule_time.strftime('%H:%M') }} {{ period_label }}</small>
+        </td>
+        <td>
+          {% for cm in cls.class_materials %}
+            <span class="badge bg-light text-dark border">{{ cm.material.name if cm.material }}</span>
+          {% endfor %}
+        </td>
+        <td>
+          {% for ct in cls.class_teachers %}
+            {{ ct.teacher.name if ct.teacher }}
+          {% endfor %}
+        </td>
+        <td data-sort="{{ actual }}">
+          {% if cls.status == 'overflow' or actual > cls.overflow_cap %}
+            {% set cap_color = '#dc3545' %}
+          {% elif cls.status == 'full' or actual >= cls.capacity %}
+            {% set cap_color = '#fd7e14' %}
+          {% else %}
+            {% set cap_color = '' %}
+          {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold" {% if cap_color %}style="color:{{ cap_color }}"{% endif %}>
+              {{ actual }} / {{ cls.capacity }}
+            </span>
+            <div class="capacity-bar flex-grow-1">
+              <div class="capacity-fill"
+                   style="width:{{ [actual * 100 // cls.capacity if cls.capacity else 0, 100] | min }}%;{% if cap_color %}background:{{ cap_color }}{% endif %}"></div>
+            </div>
+          </div>
+        </td>
+        <td data-sort="{{ cls.status }}">
+          {% if cls.status == 'overflow' or actual > cls.overflow_cap %}
+            <span class="badge text-white" style="background:#dc3545">超员</span>
+          {% elif cls.status == 'full' or actual >= cls.capacity %}
+            <span class="badge text-dark" style="background:#fdce14">满员</span>
+          {% elif cls.status == 'closed' %}
+            <span class="badge bg-secondary">关闭</span>
+          {% else %}
+            <span class="badge bg-success">开放</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">暂无班级数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  const table = document.getElementById('dashClassTable');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+
+  // --- Natural compare ---
+  function natCmp(a, b) {
+    const re = /(\d+)|(\D+)/g;
+    const pa = String(a).match(re)||[], pb = String(b).match(re)||[];
+    for (let i=0;i<Math.max(pa.length,pb.length);i++){
+      if(i>=pa.length) return -1; if(i>=pb.length) return 1;
+      const na=parseFloat(pa[i]),nb=parseFloat(pb[i]);
+      const c=(!isNaN(na)&&!isNaN(nb))?na-nb:pa[i].localeCompare(pb[i],'zh');
+      if(c!==0) return c;
+    }
+    return 0;
+  }
+
+  // --- Multi-column sort: array of {col, asc} ---
+  let sortKeys = [];  // [{col, asc}, ...]
+
+  function cellVal(row, col) {
+    if (col >= row.cells.length) return '';
+    return (row.cells[col].dataset.sort ?? row.cells[col].textContent).trim();
+  }
+
+  function applySort() {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 1);
+    rows.sort((a, b) => {
+      for (const {col, asc} of sortKeys) {
+        const c = natCmp(cellVal(a,col), cellVal(b,col));
+        if (c !== 0) return asc ? c : -c;
+      }
+      return 0;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+    // Update icons
+    table.querySelectorAll('th.sortable').forEach(th => {
+      const col = parseInt(th.dataset.col);
+      const key = sortKeys.find(k => k.col === col);
+      const icon = th.querySelector('.sort-icon');
+      if (!icon) return;
+      if (!key) { icon.textContent = '⇅'; th.style.color = ''; }
+      else {
+        const rank = sortKeys.indexOf(key) + 1;
+        icon.textContent = (key.asc ? '↑' : '↓') + (sortKeys.length > 1 ? rank : '');
+        th.style.color = '#0d6efd';
+      }
+    });
+  }
+
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer'; th.style.userSelect = 'none';
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      const existing = sortKeys.find(k => k.col === col);
+      if (existing) {
+        // Already in sort: toggle direction, keep position in priority order
+        existing.asc = !existing.asc;
+      } else {
+        // New column: append as the next priority (preserves all existing sorts)
+        sortKeys.push({col, asc: true});
+      }
+      applySort();
+      applyFilter();
+    });
+  });
+
+  // --- Clear sort ---
+  document.getElementById('clearSort').addEventListener('click', () => {
+    sortKeys = [];
+    applySort();
+  });
+
+  // --- Filter ---
+  const filterRow = document.getElementById('filterRow');
+  document.getElementById('toggleFilter').addEventListener('click', () => {
+    const hidden = filterRow.style.display === 'none';
+    filterRow.style.display = hidden ? '' : 'none';
+    if (!hidden) { // clearing filters on hide
+      filterRow.querySelectorAll('.filter-input').forEach(i => { i.value = ''; });
+      applyFilter();
+    }
+  });
+
+  function applyFilter() {
+    const filters = [];
+    filterRow.querySelectorAll('.filter-input').forEach(inp => {
+      filters[parseInt(inp.dataset.col)] = inp.value.trim().toLowerCase();
+    });
+    Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 1).forEach(row => {
+      let show = true;
+      filters.forEach((f, col) => {
+        if (!f) return;
+        const text = row.cells[col] ? row.cells[col].textContent.toLowerCase() : '';
+        // Support >= and <= for numeric columns
+        const m = f.match(/^([><=]{1,2})\s*(\d+)$/);
+        if (m) {
+          const n = parseFloat(row.cells[col]?.dataset?.sort ?? text);
+          const v = parseFloat(m[2]);
+          if (m[1]==='>' && !(n>v)) show=false;
+          else if (m[1]==='<' && !(n<v)) show=false;
+          else if (m[1]==='>=') { if(!(n>=v)) show=false; }
+          else if (m[1]==='<=') { if(!(n<=v)) show=false; }
+          else if (m[1]==='=') { if(n!==v) show=false; }
+        } else if (!text.includes(f)) { show = false; }
+      });
+      row.style.display = show ? '' : 'none';
+    });
+  }
+
+  filterRow.querySelectorAll('.filter-input').forEach(inp => {
+    inp.addEventListener('input', applyFilter);
+  });
+})();
+</script>
+{% endblock %}

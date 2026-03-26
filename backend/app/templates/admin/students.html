@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% block title %}学生列表 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">学生列表</h4>
+  <form class="d-flex gap-2" method="get" action="/admin/students">
+    <input type="text" name="search" class="form-control" placeholder="搜索姓名..." value="{{ search }}" style="width:200px">
+    <button class="btn btn-outline-secondary">搜索</button>
+    {% if search %}<a href="/admin/students" class="btn btn-outline-secondary">清除</a>{% endif %}
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="card-header">共 {{ students | length }} 名学生</div>
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>姓名</th>
+        <th>监护人</th>
+        <th>微信号</th>
+        <th>时段偏好</th>
+        <th>识字量</th>
+        <th>分班状态</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      {% set assessment = namespace(obj=none) %}
+      {% for a in s.proficiency_assessments %}
+        {% if semester and a.semester_id == semester.id %}
+          {% set assessment.obj = a %}
+        {% endif %}
+      {% endfor %}
+      {% if not assessment.obj and s.proficiency_assessments %}
+        {% set assessment.obj = s.proficiency_assessments[-1] %}
+      {% endif %}
+
+      {% set enrollment = namespace(obj=none) %}
+      {% for e in s.enrollments %}
+        {% set enrollment.obj = e %}
+      {% endfor %}
+
+      <tr>
+        <td>
+          <div class="fw-medium">{{ s.name }}</div>
+        </td>
+        <td>
+          <div>{{ s.guardian.name if s.guardian else '—' }}</div>
+          <small class="text-muted">{{ s.guardian.phone if s.guardian else '' }}</small>
+        </td>
+        <td class="text-muted small">{{ s.guardian.wechat_id if s.guardian and s.guardian.wechat_id else '—' }}</td>
+        <td>
+          {% for sp in s.schedule_preferences %}
+          <small class="badge bg-light text-dark border me-1">{{ slot_labels.get(sp.slot_type, sp.slot_type) }}</small>
+          {% endfor %}
+        </td>
+        <td>
+          {% if assessment.obj %}
+            <span class="badge bg-secondary">L{{ assessment.obj.effective_level }}</span>
+            {% if assessment.obj.admin_override_level %}
+              <small class="text-warning" title="管理员调整">✏</small>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if enrollment.obj %}
+            {% if enrollment.obj.status == 'enrolled' %}
+              <span class="badge bg-success">已分班</span>
+              <small class="text-muted">{{ class_names.get(enrollment.obj.class_id, '?') }}</small>
+            {% elif enrollment.obj.status == 'waitlisted' %}
+              <span class="badge bg-warning text-dark">候补 #{{ enrollment.obj.waitlist_pos }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ enrollment.obj.status }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge bg-light text-muted border">待分班</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if assessment.obj and semester %}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal" data-bs-target="#overrideModal{{ s.id }}">调整等级</button>
+          {% endif %}
+        </td>
+      </tr>
+
+      {% if assessment.obj and semester %}
+      <div class="modal fade" id="overrideModal{{ s.id }}" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+          <form method="post" action="/admin/students/{{ s.id }}/override-level">
+            <input type="hidden" name="semester_id" value="{{ semester.id }}">
+            <div class="modal-header">
+              <h5 class="modal-title">调整 {{ s.name }} 的等级</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted small">系统评估等级：{{ assessment.obj.computed_level }}，当前有效等级：{{ assessment.obj.effective_level }}</p>
+              <label class="form-label">调整为等级</label>
+              <input type="number" name="level" class="form-control" required
+                     value="{{ assessment.obj.effective_level }}" min="1" max="20">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button type="submit" class="btn btn-primary">确认调整</button>
+            </div>
+          </form>
+        </div></div>
+      </div>
+      {% endif %}
+
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">暂无学生数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

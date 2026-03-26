@@ -1,0 +1,181 @@
+{% extends "admin/base.html" %}
+{% block title %}待分班学生 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">待分班学生</h4>
+  {% if semester %}
+    <span class="badge bg-secondary fs-6">{{ semester.name }}</span>
+  {% endif %}
+</div>
+
+{% if not semester %}
+<div class="alert alert-warning">当前没有活跃学期，无法显示待分班学生。</div>
+{% else %}
+
+<div class="table-card">
+  <div class="card-header">
+    共 {{ students | length }} 名待分班学生
+    <small class="text-muted ms-2">点击列标题排序</small>
+  </div>
+  <table class="table table-hover align-middle mb-0" id="sortTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">姓名 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">性别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">出生年月 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3">报名时间 <span class="sort-icon">⇅</span></th>
+        <th>家长</th>
+        <th style="white-space:nowrap;width:1%">兄弟姐妹</th>
+        <th style="white-space:nowrap;width:1%">时段偏好</th>
+        <th class="sortable" data-col="7">识字量 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="8">建议级别 <span class="sort-icon">⇅</span></th>
+        <th>建议教材</th>
+        <th style="white-space:nowrap;width:1%">系统推荐班级</th>
+        <th class="text-center">已试听</th>
+        <th style="min-width:260px">分班操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      {% set assessment = namespace(obj=none) %}
+      {% for a in s.proficiency_assessments %}
+        {% if a.semester_id == semester.id %}
+          {% set assessment.obj = a %}
+        {% endif %}
+      {% endfor %}
+      <tr>
+        <td class="fw-medium">{{ s.name }}</td>
+        <td data-sort="{{ s.gender }}">
+          {% if s.gender == 'male' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">男</span>
+          {% elif s.gender == 'female' %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">女</span>
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td data-sort="{{ s.birth_date.strftime('%Y%m%d') if s.birth_date else '' }}">
+          <small>{{ s.birth_date.strftime('%Y-%m') if s.birth_date else '—' }}</small>
+        </td>
+        <td data-sort="{{ s.created_at.strftime('%Y%m%d%H%M%S') }}">
+          <small>{{ s.created_at.strftime('%Y-%m-%d') }}</small>
+        </td>
+                <td class="text-muted small">
+          {% if s.guardian %}{{ s.guardian.name }}{% endif %}
+        </td>
+        <td class="small" style="white-space:nowrap">
+          {% if s.sibling_in_school and s.sibling_info %}
+            {{ s.sibling_info }}
+          {% elif s.sibling_in_school %}
+            <span class="text-muted">在校</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% for pref in s.schedule_preferences %}
+            {% if pref.semester_id == semester.id %}
+              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle me-1">
+                {{ slot_labels.get(pref.slot_type, pref.slot_type) }}
+              </span>
+            {% endif %}
+          {% endfor %}
+        </td>
+        <td data-sort="{{ assessment.obj.vocab_level if assessment.obj else 0 }}" class="col-vocab">
+          {% if assessment.obj and assessment.obj.vocab_level %}
+            <span class="badge bg-secondary">{{ vocab_labels.get(assessment.obj.vocab_level, assessment.obj.vocab_level) }}</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td data-sort="{{ assessment.obj.effective_level if assessment.obj else 0 }}">
+          {% if assessment.obj %}
+            <span class="badge bg-success fs-6">L{{ assessment.obj.effective_level }}</span>
+            {% if assessment.obj.admin_override_level %}
+              <small class="text-warning d-block">管理员调整</small>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td class="small" style="white-space:nowrap">
+          {% if assessment.obj and assessment.obj.effective_level %}
+            {{ material_labels.get(assessment.obj.effective_level, '高级课程') }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        {% set pl = placement_map.get(s.id, {}) %}
+        <td class="small">
+          {% if pl.get('recommended') %}
+            {% set rec = pl['recommended'] %}
+            <div class="fw-medium text-success">★ {{ rec['class_name'] }}</div>
+            <div class="text-muted" style="font-size:0.8em">{{ rec['slot_label'] or '' }}{% if rec['is_overflow'] %} <span class="text-warning">超员</span>{% endif %}</div>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+          {% for alt in pl.get('alternatives', []) %}
+            <div class="text-muted mt-1">{{ loop.index }}. {{ alt['class_name'] }}</div>
+          {% endfor %}
+        </td>
+        <td class="text-center">
+          <form method="post" action="/admin/pending-students/{{ s.id }}/toggle-audited" class="d-inline">
+            {% if pl.get('has_audited') %}
+              <button class="btn btn-sm btn-success py-0 px-2" title="点击取消">✓ 是</button>
+            {% else %}
+              <button class="btn btn-sm btn-outline-secondary py-0 px-2" title="标记为已试听">—</button>
+            {% endif %}
+          </form>
+        </td>
+        <td>
+          <form method="post" action="/admin/pending-students/{{ s.id }}/assign" class="d-flex gap-2 align-items-center">
+            <select name="class_id" class="form-select form-select-sm" style="max-width:200px" required>
+              <option value="">选择班级...</option>
+              {% for cls in all_classes %}
+              <option value="{{ cls.id }}"
+                {% if assessment.obj and cls.level == assessment.obj.effective_level %}
+                  style="font-weight:bold"
+                {% endif %}
+              >
+                L{{ cls.level }} {{ cls.name }}
+                {% if cls.schedule_day %}({{ cls.schedule_day }}{% if cls.schedule_time %} {{ cls.schedule_time }}{% endif %}){% endif %}
+                [{{ cls.current_count }}/{{ cls.capacity }}]
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">分班</button>
+          </form>
+          {% if s.other_notes %}
+            <small class="text-muted d-block mt-1">{{ s.other_notes }}</small>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+(function(){
+  const t=document.getElementById('sortTable');
+  if(!t) return;
+  let sc=-1,sa=true;
+  t.querySelectorAll('th.sortable').forEach(th=>{
+    th.style.cursor='pointer';th.style.userSelect='none';
+    th.addEventListener('click',()=>{
+      const col=parseInt(th.dataset.col);
+      if(sc===col){sa=!sa;}else{sc=col;sa=true;}
+      const tb=t.querySelector('tbody');
+      const rows=Array.from(tb.querySelectorAll('tr')).filter(r=>r.cells.length>1);
+      rows.sort((a,b)=>{
+        const va=(a.cells[col].dataset.sort??a.cells[col].textContent).trim();
+        const vb=(b.cells[col].dataset.sort??b.cells[col].textContent).trim();
+        const na=parseFloat(va),nb=parseFloat(vb);
+        const c=(!isNaN(na)&&!isNaN(nb))?na-nb:va.localeCompare(vb,'zh');
+        return sa?c:-c;
+      });
+      rows.forEach(r=>tb.appendChild(r));
+      t.querySelectorAll('th.sortable .sort-icon').forEach(ic=>ic.textContent='⇅');
+      th.querySelector('.sort-icon').textContent=sa?'↑':'↓';
+    });
+  });
+})();
+</script>
+{% endblock %}

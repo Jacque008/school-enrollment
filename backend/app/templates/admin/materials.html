@@ -1,0 +1,154 @@
+{% extends "admin/base.html" %}
+{% block title %}教材管理 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">教材管理</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ 添加教材</button>
+</div>
+
+<div class="table-card">
+  <table class="table table-hover align-middle mb-0" id="sortTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0" style="cursor:pointer;user-select:none">教材名称 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1" style="cursor:pointer;user-select:none">对应级别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2" style="cursor:pointer;user-select:none">课文数 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3" style="cursor:pointer;user-select:none">生字数 <span class="sort-icon">⇅</span></th>
+        <th>生字集</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in materials %}
+      <tr>
+        <td class="fw-medium">{{ m.name }}</td>
+        <td data-sort="{{ m.level if m.level else 999 }}">{{ m.level or '—' }}</td>
+        <td data-sort="{{ m.lesson_count or 0 }}">{{ m.lesson_count or '—' }}</td>
+        <td data-sort="{{ m.char_count or 0 }}">{{ m.char_count or '—' }}</td>
+        <td class="text-muted small" style="max-width:300px;word-break:break-all">{{ m.char_set or '—' }}</td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal" data-bs-target="#editModal{{ m.id }}">编辑</button>
+          <form method="post" action="/admin/materials/{{ m.id }}/delete" class="d-inline"
+                onsubmit="return confirm('确认删除教材 {{ m.name }}？')">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+
+      <!-- Edit modal -->
+      <div class="modal fade" id="editModal{{ m.id }}" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+          <form method="post" action="/admin/materials/{{ m.id }}/edit">
+            <div class="modal-header">
+              <h5 class="modal-title">编辑教材</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+              <div class="col-8">
+                <label class="form-label">名称 *</label>
+                <input type="text" name="name" class="form-control" required value="{{ m.name }}">
+              </div>
+              <div class="col-4">
+                <label class="form-label">对应级别</label>
+                <input type="number" name="level" class="form-control" value="{{ m.level or '' }}">
+              </div>
+              <div class="col-6">
+                <label class="form-label">课文数</label>
+                <input type="number" name="lesson_count" class="form-control" min="0" value="{{ m.lesson_count or '' }}">
+              </div>
+              <div class="col-6">
+                <label class="form-label">生字数</label>
+                <input type="number" name="char_count" class="form-control" min="0" value="{{ m.char_count or '' }}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">生字集</label>
+                <textarea name="char_set" class="form-control" rows="4" placeholder="输入生字，可用空格或换行分隔">{{ m.char_set or '' }}</textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div></div>
+      </div>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">暂无教材</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="post" action="/admin/materials/new">
+      <div class="modal-header">
+        <h5 class="modal-title">添加教材</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body row g-3">
+        <div class="col-8">
+          <label class="form-label">名称 *</label>
+          <input type="text" name="name" class="form-control" required placeholder="如：华文3">
+        </div>
+        <div class="col-4">
+          <label class="form-label">对应级别</label>
+          <input type="number" name="level" class="form-control" placeholder="如：5">
+        </div>
+        <div class="col-6">
+          <label class="form-label">课文数</label>
+          <input type="number" name="lesson_count" class="form-control" min="0">
+        </div>
+        <div class="col-6">
+          <label class="form-label">生字数</label>
+          <input type="number" name="char_count" class="form-control" min="0">
+        </div>
+        <div class="col-12">
+          <label class="form-label">生字集</label>
+          <textarea name="char_set" class="form-control" rows="4" placeholder="输入生字，可用空格或换行分隔"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">添加</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+
+<script>
+(function(){
+  function natCmp(a, b) {
+    const re = /(\d+)|(\D+)/g;
+    const pa = String(a).match(re) || [], pb = String(b).match(re) || [];
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      if (i >= pa.length) return -1;
+      if (i >= pb.length) return 1;
+      const na = parseFloat(pa[i]), nb = parseFloat(pb[i]);
+      const c = (!isNaN(na) && !isNaN(nb)) ? na - nb : pa[i].localeCompare(pb[i], 'zh');
+      if (c !== 0) return c;
+    }
+    return 0;
+  }
+  const t = document.getElementById('sortTable'); let sc = -1, sa = true;
+  t.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (sc === col) { sa = !sa; } else { sc = col; sa = true; }
+      const tb = t.querySelector('tbody');
+      const rows = Array.from(tb.querySelectorAll('tr')).filter(r => r.cells.length > 1);
+      rows.sort((a, b) => {
+        const va = (a.cells[col].dataset.sort ?? a.cells[col].textContent).trim();
+        const vb = (b.cells[col].dataset.sort ?? b.cells[col].textContent).trim();
+        return sa ? natCmp(va, vb) : natCmp(vb, va);
+      });
+      rows.forEach(r => tb.appendChild(r));
+      t.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.textContent = '⇅');
+      th.querySelector('.sort-icon').textContent = sa ? '↑' : '↓';
+    });
+  });
+})();
+</script>
+{% endblock %}

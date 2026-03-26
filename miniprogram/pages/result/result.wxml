@@ -1,0 +1,43 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:else>
+    <!-- 正式分班结果（管理员确认后才显示） -->
+    <view wx:if="{{enrollments.length > 0}}">
+      <text class="section-title">正式分班结果</text>
+      <view wx:for="{{enrollments}}" wx:key="id" class="enrollment-card">
+        <view class="card-row">
+          <text class="student-name">{{item.student_name}}</text>
+          <view class="status-badge status-{{item.status}}">
+            <text>{{item.status === 'enrolled' ? '已录取' : item.status === 'waitlisted' ? '候补中' : '已完成'}}</text>
+          </view>
+        </view>
+        <text class="class-name">班级：{{item.class_name}}</text>
+        <view wx:if="{{item.status === 'waitlisted' && item.waitlist_pos}}" class="waitlist-info">
+          <text>候补位置：第 {{item.waitlist_pos}} 位</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 评估提交确认 -->
+    <view class="result-card">
+      <view class="check-icon">✓</view>
+      <text class="result-title">评估结果已提交</text>
+
+      <view wx:if="{{level}}" class="level-block">
+        <view class="level-row">
+          <text class="level-label">孩子目前的程度</text>
+          <view class="level-badge">L{{level}}（{{band}}）</view>
+        </view>
+        <view class="level-row">
+          <text class="level-label">适合教材</text>
+          <text class="level-value">{{material}}</text>
+        </view>
+      </view>
+
+      <text class="result-hint">稍后会有老师联系您安排试听，请留意微信消息。</text>
+    </view>
+  </block>
+</view>

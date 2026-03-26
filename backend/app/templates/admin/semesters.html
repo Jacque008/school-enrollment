@@ -1,0 +1,152 @@
+{% extends "admin/base.html" %}
+{% block title %}学期管理 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">学期管理</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newModal">+ 新建学期</button>
+</div>
+
+<div class="table-card">
+  <div class="card-header">
+    共 {{ semesters | length }} 个学期
+    <small class="text-muted ms-2">点击列标题排序</small>
+  </div>
+  <table class="table table-hover align-middle mb-0" id="semTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">学期号 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">开学日期 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">结业日期 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3">总持续周数 <span class="sort-icon">⇅</span></th>
+        <th>假期周数</th>
+        <th class="sortable" data-col="5">状态 <span class="sort-icon">⇅</span></th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in semesters %}
+      <tr>
+        <td class="fw-medium">{{ s.name }}</td>
+        <td data-sort="{{ s.start_date.isoformat() }}">{{ s.start_date.strftime('%Y-%m-%d') }}</td>
+        <td data-sort="{{ s.end_date.isoformat() }}">{{ s.end_date.strftime('%Y-%m-%d') }}</td>
+        <td data-sort="{{ s.total_weeks or 0 }}">
+          {% if s.total_weeks %}{{ s.total_weeks }} 周{% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td>
+          {% if s.holiday_weeks %}
+            {% for w in s.holiday_weeks.split(',') %}
+              <span class="badge bg-light text-dark border me-1">第{{ w.strip() }}周</span>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td data-sort="{{ '0' if s.is_active else '1' }}">
+          {% if s.is_active %}
+            <span class="badge bg-success">当前学期</span>
+          {% else %}
+            <span class="badge bg-secondary">未激活</span>
+          {% endif %}
+        </td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary"
+                  onclick="openEdit({{ s.id }}, '{{ s.name }}', '{{ s.start_date.isoformat() }}', '{{ s.end_date.isoformat() }}', '{{ s.reg_open_date.isoformat() }}', '{{ s.reg_close_date.isoformat() }}', '{{ s.total_weeks or '' }}', '{{ s.holiday_weeks or '' }}')">
+            编辑
+          </button>
+          {% if not s.is_active %}
+          <form method="post" action="/admin/semesters/{{ s.id }}/activate" class="d-inline"
+                onsubmit="return confirm('将此学期设为当前激活学期？')">
+            <button class="btn btn-sm btn-outline-success">激活</button>
+          </form>
+          <form method="post" action="/admin/semesters/{{ s.id }}/delete" class="d-inline"
+                onsubmit="return confirm('确认删除学期 {{ s.name }}？')">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">暂无学期数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- New semester modal -->
+<div class="modal fade" id="newModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="/admin/semesters/new" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">新建学期</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {% include "admin/_semester_fields.html" %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">创建</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit semester modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" id="editForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">编辑学期</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {% include "admin/_semester_fields.html" %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, name, start, end, regOpen, regClose, totalWeeks, holidayWeeks) {
+  const form = document.getElementById('editForm');
+  form.action = '/admin/semesters/' + id + '/edit';
+  form.name.value = name;
+  form.start_date.value = start;
+  form.end_date.value = end;
+  form.reg_open_date.value = regOpen;
+  form.reg_close_date.value = regClose;
+  form.total_weeks.value = totalWeeks;
+  form.holiday_weeks.value = holidayWeeks;
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+// Sort
+(function () {
+  const table = document.getElementById('semTable');
+  let sortCol = -1, sortAsc = true;
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer'; th.style.userSelect = 'none';
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 1);
+      rows.sort((a, b) => {
+        const va = (a.cells[col].dataset.sort ?? a.cells[col].textContent).trim();
+        const vb = (b.cells[col].dataset.sort ?? b.cells[col].textContent).trim();
+        const na = parseFloat(va), nb = parseFloat(vb);
+        const cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : va.localeCompare(vb, 'zh');
+        return sortAsc ? cmp : -cmp;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      table.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.textContent = '⇅');
+      th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+    });
+  });
+})();
+</script>
+{% endblock %}

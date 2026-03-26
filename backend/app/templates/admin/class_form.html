@@ -1,0 +1,154 @@
+{% extends "admin/base.html" %}
+{% block title %}{% if cls %}编辑班级{% else %}新建班级{% endif %} - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/classes">班级管理</a></li>
+      <li class="breadcrumb-item active">{% if cls %}编辑 {{ cls.name }}{% else %}新建班级{% endif %}</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold">{% if cls %}编辑班级{% else %}新建班级{% endif %}</h4>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:760px">
+  <div class="card-body p-4">
+    <form method="post" action="{% if cls %}/admin/classes/{{ cls.id }}/edit{% else %}/admin/classes/new{% endif %}">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">班级名称 *</label>
+          <input type="text" name="name" class="form-control" required value="{{ cls.name if cls else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">级别 (level) *</label>
+          <input type="number" name="level" class="form-control" required value="{{ cls.level if cls else '' }}" min="1" max="30">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">学期 *</label>
+          <select name="semester_id" class="form-select" {% if cls %}disabled{% endif %}>
+            {% for s in semesters %}
+            <option value="{{ s.id }}" {% if (cls and cls.semester_id == s.id) or (not cls and s.is_active) %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+          {% if cls %}<input type="hidden" name="semester_id" value="{{ cls.semester_id }}">{% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">上课日 *</label>
+          <select name="schedule_day" class="form-select" required>
+            <option value="SAT" {% if cls and cls.schedule_day == 'SAT' %}selected{% endif %}>周六</option>
+            <option value="SUN" {% if cls and cls.schedule_day == 'SUN' %}selected{% endif %}>周日</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">上课时间 *</label>
+          <input type="time" name="schedule_time" class="form-control" required
+                 value="{{ cls.schedule_time.strftime('%H:%M') if cls else '09:30' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">授课方式 *</label>
+          <select name="modality" class="form-select" required>
+            <option value="onsite" {% if cls and cls.modality == 'onsite' %}selected{% endif %}>实体课</option>
+            <option value="online" {% if cls and cls.modality == 'online' %}selected{% endif %}>网课</option>
+            <option value="mini" {% if cls and cls.modality == 'mini' %}selected{% endif %}>迷你网课</option>
+          </select>
+        </div>
+      </div>
+
+      {% if cls %}
+      <!-- Editing: show actual count + manual override + status -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">实际人数</label>
+          <div class="input-group">
+            <input type="number" name="current_count" class="form-control fw-bold"
+                   value="{{ cls.current_count }}" min="0">
+            <span class="input-group-text text-muted">/ {{ cls.capacity }}</span>
+          </div>
+          {% if actual_enrolled is defined %}
+          <small class="text-muted">系统登记已分班：{{ actual_enrolled }} 人</small>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">状态</label>
+          {% set cur_status = effective_status if effective_status is defined else cls.status %}
+          <select name="status" class="form-select">
+            <option value="open" {% if cur_status == 'open' %}selected{% endif %}>开放</option>
+            <option value="full" {% if cur_status == 'full' %}selected{% endif %}>满员</option>
+            <option value="overflow" {% if cur_status == 'overflow' %}selected{% endif %}>超员</option>
+            <option value="closed" {% if cur_status == 'closed' %}selected{% endif %}>关闭</option>
+          </select>
+          <small class="text-muted">满员/超员根据实际人数自动判断，可手动覆盖</small>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">教室 / 地点</label>
+          <input type="text" name="room" class="form-control" value="{{ cls.room or '' if cls else '' }}" placeholder="如：教室一">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">网课链接 / 房间号</label>
+          <input type="text" name="meeting_link" class="form-control" value="{{ cls.meeting_link or '' if cls else '' }}" placeholder="如：336699">
+        </div>
+      </div>
+
+      <!-- Capacity override (optional, defaults from system settings) -->
+      <details class="mb-3">
+        <summary class="text-muted small" style="cursor:pointer">容量设置（默认值来自系统常数：标准{{ cfg.default_capacity }}人 / 超员{{ cfg.default_overflow_cap }}人）</summary>
+        <div class="row g-3 mt-1">
+          <div class="col-md-4">
+            <label class="form-label">标准人数</label>
+            <input type="number" name="capacity" class="form-control"
+                   value="{{ cls.capacity if cls else cfg.default_capacity }}" min="1" placeholder="{{ cfg.default_capacity }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">超员上限</label>
+            <input type="number" name="overflow_cap" class="form-control"
+                   value="{{ cls.overflow_cap if cls else cfg.default_overflow_cap }}" min="1" placeholder="{{ cfg.default_overflow_cap }}">
+          </div>
+        </div>
+      </details>
+
+      <hr class="my-3">
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label fw-medium">教材</label>
+          <div class="border rounded p-3" style="max-height:200px;overflow-y:auto">
+            {% for m in all_materials %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="material_ids" value="{{ m.id }}"
+                     id="mat_{{ m.id }}" {% if m.id in selected_materials %}checked{% endif %}>
+              <label class="form-check-label" for="mat_{{ m.id }}">{{ m.name }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-medium">教师</label>
+          <div class="border rounded p-3" style="max-height:200px;overflow-y:auto">
+            {% for t in all_teachers %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="teacher_ids" value="{{ t.id }}"
+                     id="tch_{{ t.id }}" {% if t.id in selected_teachers %}checked{% endif %}>
+              <label class="form-check-label" for="tch_{{ t.id }}">{{ t.name }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <a href="/admin/classes" class="btn btn-outline-secondary">取消</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,286 @@
+{% extends "admin/base.html" %}
+{% block title %}在读学生 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">在读学生</h4>
+  <form class="d-flex gap-2 flex-wrap align-items-center" method="get" action="/admin/enrolled-students">
+    <input type="text" name="search" class="form-control form-control-sm" placeholder="搜索姓名..." value="{{ search }}" style="width:160px">
+    <select name="f_class" class="form-select form-select-sm" style="width:auto">
+      <option value="">全部班级</option>
+      {% for cn in all_class_names %}
+        <option value="{{ cn }}" {% if f_class == cn %}selected{% endif %}>{{ cn }}</option>
+      {% endfor %}
+    </select>
+    <select name="f_gender" class="form-select form-select-sm" style="width:auto">
+      <option value="">全部性别</option>
+      <option value="male"   {% if f_gender=='male'   %}selected{% endif %}>男</option>
+      <option value="female" {% if f_gender=='female' %}selected{% endif %}>女</option>
+    </select>
+    <button class="btn btn-outline-secondary btn-sm">筛选</button>
+    {% if search or f_class or f_gender %}
+      <a href="/admin/enrolled-students" class="btn btn-outline-secondary btn-sm">清除</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="card-header">
+    共 {{ students | length }} 名在读学生
+    {% if semester %}（{{ semester.name }}）{% endif %}
+    <small class="text-muted ms-2">点击列标题排序</small>
+  </div>
+  <table class="table table-hover align-middle mb-0" id="sortTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">学号 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">姓名 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">性别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3">出生年月 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="4">年龄 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="5">国籍 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="6">班级 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="7">进入学堂时间 <span class="sort-icon">⇅</span></th>
+        <th style="max-width:180px">兄弟姐妹</th>
+        <th class="sortable" data-col="9">学费(kr) <span class="sort-icon">⇅</span></th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      {% set enrolled_class = namespace(name='—', id=none) %}
+      {% for e in s.enrollments %}
+        {% if e.status == 'enrolled' and e.class_ and (not semester or e.class_.semester_id == semester.id) %}
+          {% set enrolled_class.name = e.class_.name %}
+          {% set enrolled_class.id = e.class_id %}
+        {% endif %}
+      {% endfor %}
+      {% set tuition = tuition_map.get(s.id) %}
+      {% set start = enroll_start_map.get(s.id) %}
+      <tr>
+        <td class="text-muted small" data-sort="{{ s.id }}">S{{ '%04d' % s.id }}</td>
+        <td>
+          <div class="fw-medium">{{ s.name }}</div>
+        </td>
+        <td data-sort="{{ s.gender }}">
+          {% if s.gender == 'male' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">男</span>
+          {% elif s.gender == 'female' %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">女</span>
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td data-sort="{{ s.birth_date.strftime('%Y%m%d') if s.birth_date else '' }}">
+          <small>{{ s.birth_date.strftime('%Y-%m') if s.birth_date else '—' }}</small>
+        </td>
+        <td data-sort="{{ s.birth_date.toordinal() if s.birth_date else 0 }}" class="age-cell" data-birth="{{ s.birth_date.isoformat() if s.birth_date else '' }}">
+          <small class="text-muted">—</small>
+        </td>
+        <td class="text-muted small">{{ s.nationality or '—' }}</td>
+        <td>{{ enrolled_class.name }}</td>
+        <td data-sort="{{ start.strftime('%Y%m%d') if start else '' }}">
+          {% if start %}<small>{{ start.strftime('%Y-%m-%d') }}</small>
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td style="max-width:180px">
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+          {% set siblings = sibling_map.get(s.guardian_id, []) %}
+          {% for sib in siblings %}
+            {% if sib.id != s.id %}
+              {% set sib_class = namespace(name='') %}
+              {% for e in sib.enrollments %}
+                {% if e.status == 'enrolled' and e.class_ %}
+                  {% set sib_class.name = e.class_.name %}
+                {% endif %}
+              {% endfor %}
+              <a href="/admin/enrolled-students?search={{ sib.name }}" class="badge bg-light text-dark border text-decoration-none" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                {{ sib.name }}{% if sib_class.name %} · {{ sib_class.name }}{% endif %}
+              </a>
+            {% endif %}
+          {% endfor %}
+          </div>
+        </td>
+        <td data-sort="{{ tuition.final_fee if tuition else -1 }}">
+          {% if tuition %}
+            {% if tuition.final_fee == 0 %}
+              <span class="text-muted">0</span>
+            {% else %}
+              <strong>{{ tuition.final_fee }}</strong>
+            {% endif %}
+            {% if tuition.note %}
+              <small class="text-muted d-block">{{ tuition.note }}</small>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-secondary"
+            data-bs-toggle="modal" data-bs-target="#editStudentModal"
+            data-id="{{ s.id }}"
+            data-name="{{ s.name | e }}"
+            data-gender="{{ s.gender }}"
+            data-birth-date="{{ s.birth_date.strftime('%Y-%m') if s.birth_date else '' }}"
+            data-city-region="{{ s.city_region | e }}"
+            data-nationality="{{ s.nationality or '' | e }}"
+            data-other-notes="{{ s.other_notes or '' | e }}"
+            data-is-teacher-child="{{ '1' if s.is_teacher_child else '' }}"
+            data-class-id="{{ enrolled_class.id or '' }}"
+            data-g-name="{{ s.guardian.name | e if s.guardian else '' }}"
+            data-g-email="{{ s.guardian.email or '' | e if s.guardian else '' }}"
+            data-g-phone="{{ s.guardian.phone or '' | e if s.guardian else '' }}"
+            data-g-wechat="{{ s.guardian.wechat_id or '' | e if s.guardian else '' }}"
+          >编辑</button>
+          <form method="post" action="/admin/students/{{ s.id }}/delete"
+            onsubmit="return confirm('确定删除学生「{{ s.name }}」？此操作不可撤销。')"
+            class="d-inline">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="11" class="text-center text-muted py-4">暂无在读学生</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form id="editStudentForm" method="post">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">编辑学生信息</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <h6 class="fw-bold mb-0">学生信息</h6>
+          <div class="col-sm-6">
+            <label class="form-label">姓名</label>
+            <input type="text" name="name" id="e_name" class="form-control" required>
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label">性别</label>
+            <select name="gender" id="e_gender" class="form-select">
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label">出生年月</label>
+            <input type="month" name="birth_date" id="e_birth_date" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">所在城市或地区</label>
+            <input type="text" name="city_region" id="e_city_region" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">国籍</label>
+            <input type="text" name="nationality" id="e_nationality" class="form-control" placeholder="如 中国、瑞典">
+          </div>
+          <div class="col-12">
+            <label class="form-label">备注</label>
+            <textarea name="other_notes" id="e_other_notes" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input type="checkbox" name="is_teacher_child" id="e_is_teacher_child" class="form-check-input" value="1">
+              <label class="form-check-label" for="e_is_teacher_child">教师子女</label>
+            </div>
+          </div>
+
+          <hr class="my-1">
+          <h6 class="fw-bold mb-0">在读班级</h6>
+          <div class="col-12">
+            <select name="class_id" id="e_class_id" class="form-select">
+              <option value="">— 无班级 —</option>
+              {% for cls in all_classes %}
+              <option value="{{ cls.id }}">L{{ cls.level }} {{ cls.name }}{% if cls.schedule_day %} ({{ cls.schedule_day }}{% if cls.schedule_time %} {{ cls.schedule_time }}{% endif %}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <hr class="my-1">
+          <h6 class="fw-bold mb-0">监护人信息</h6>
+          <div class="col-sm-6">
+            <label class="form-label">监护人姓名</label>
+            <input type="text" name="g_name" id="e_g_name" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">微信号</label>
+            <input type="text" name="g_wechat" id="e_g_wechat" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">邮箱</label>
+            <input type="email" name="g_email" id="e_g_email" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">手机号</label>
+            <input type="text" name="g_phone" id="e_g_phone" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.getElementById('editStudentModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('editStudentForm').action = '/admin/students/' + btn.dataset.id + '/edit';
+  document.getElementById('e_name').value = btn.dataset.name;
+  document.getElementById('e_gender').value = btn.dataset.gender;
+  document.getElementById('e_birth_date').value = btn.dataset.birthDate;
+  document.getElementById('e_city_region').value = btn.dataset.cityRegion;
+  document.getElementById('e_nationality').value = btn.dataset.nationality;
+  document.getElementById('e_other_notes').value = btn.dataset.otherNotes;
+  document.getElementById('e_is_teacher_child').checked = btn.dataset.isTeacherChild === '1';
+  document.getElementById('e_class_id').value = btn.dataset.classId || '';
+  document.getElementById('e_g_name').value = btn.dataset.gName;
+  document.getElementById('e_g_email').value = btn.dataset.gEmail;
+  document.getElementById('e_g_phone').value = btn.dataset.gPhone;
+  document.getElementById('e_g_wechat').value = btn.dataset.gWechat;
+});
+</script>
+
+<script>
+(function(){
+  const today = new Date();
+  function calcAge(birthStr) {
+    if (!birthStr) return '';
+    const b = new Date(birthStr);
+    let y = today.getFullYear() - b.getFullYear();
+    const m = today.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < b.getDate())) y--;
+    return y + '岁';
+  }
+  document.querySelectorAll('.age-cell').forEach(td => {
+    const age = calcAge(td.dataset.birth);
+    td.querySelector('small').textContent = age || '—';
+    td.dataset.sort = td.dataset.birth ? (new Date(td.dataset.birth).getTime() * -1) : '0';
+  });
+})();
+(function(){
+  const t=document.getElementById('sortTable');let sc=-1,sa=true;
+  t.querySelectorAll('th.sortable').forEach(th=>{
+    th.style.cursor='pointer';th.style.userSelect='none';
+    th.addEventListener('click',()=>{
+      const col=parseInt(th.dataset.col);
+      if(sc===col){sa=!sa;}else{sc=col;sa=true;}
+      const tb=t.querySelector('tbody');
+      const rows=Array.from(tb.querySelectorAll('tr')).filter(r=>r.cells.length>1);
+      rows.sort((a,b)=>{
+        const va=(a.cells[col].dataset.sort??a.cells[col].textContent).trim();
+        const vb=(b.cells[col].dataset.sort??b.cells[col].textContent).trim();
+        const na=parseFloat(va),nb=parseFloat(vb);
+        const c=(!isNaN(na)&&!isNaN(nb))?na-nb:va.localeCompare(vb,'zh');
+        return sa?c:-c;
+      });
+      rows.forEach(r=>tb.appendChild(r));
+      t.querySelectorAll('th.sortable .sort-icon').forEach(ic=>ic.textContent='⇅');
+      th.querySelector('.sort-icon').textContent=sa?'↑':'↓';
+    });
+  });
+})();
+</script>
+{% endblock %}

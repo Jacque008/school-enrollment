@@ -1,0 +1,222 @@
+.container {
+  padding: 20rpx 30rpx 120rpx;
+  background: #f7f7f7;
+  min-height: 100vh;
+}
+
+.progress-bar {
+  height: 8rpx;
+  background: #e0e0e0;
+  border-radius: 4rpx;
+  margin-bottom: 16rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #c0392b;
+  border-radius: 4rpx;
+  transition: width 0.3s;
+}
+
+.step-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 30rpx;
+  display: block;
+}
+
+.error-box {
+  background: #fde8e8;
+  border: 1px solid #f5c6cb;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  color: #721c24;
+  font-size: 28rpx;
+}
+
+.step-content {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.step-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 30rpx;
+  display: block;
+}
+
+.hint {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.field {
+  margin-bottom: 30rpx;
+}
+
+.label {
+  font-size: 30rpx;
+  color: #555;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.input {
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 18rpx;
+  font-size: 28rpx;
+  background: #fafafa;
+}
+
+.textarea {
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 18rpx;
+  font-size: 28rpx;
+  background: #fafafa;
+  width: 100%;
+  height: 160rpx;
+}
+
+.picker-view {
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 18rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.required-label {
+  color: #c0392b;
+  font-weight: bold;
+}
+
+.option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.option-btn {
+  padding: 18rpx 32rpx;
+  border: 2rpx solid #ddd;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #333;
+  background: #fafafa;
+}
+
+.option-btn-active {
+  border-color: #c0392b;
+  background: #fff8f7;
+  color: #c0392b;
+  font-weight: bold;
+}
+
+.textarea-sm {
+  height: 55rpx;
+}
+
+.sibling-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.sibling-input {
+  flex: 1;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 14rpx;
+  font-size: 28rpx;
+  background: #fafafa;
+}
+
+.sibling-remove {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fde8e8;
+  color: #c0392b;
+  border-radius: 50%;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.add-sibling-btn {
+  color: #c0392b;
+  font-size: 28rpx;
+  padding: 12rpx 0;
+  text-align: center;
+  border: 1rpx dashed #c0392b;
+  border-radius: 8rpx;
+}
+
+.radio-item {
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  font-size: 28rpx;
+  gap: 16rpx;
+}
+
+.checkbox {
+  width: 44rpx;
+  height: 44rpx;
+  border: 2rpx solid #ccc;
+  border-radius: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkbox.checked {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: white;
+}
+
+.nav-buttons {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 30rpx;
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.08);
+}
+
+.btn-primary {
+  flex: 1;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+}
+
+.btn-secondary {
+  flex: 1;
+  background: #f0f0f0;
+  color: #333;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+}

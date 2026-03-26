@@ -1,0 +1,200 @@
+{% extends "admin/base.html" %}
+{% block title %}班级管理 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">班级管理</h4>
+  <a href="/admin/classes/new" class="btn btn-primary">+ 新建班级</a>
+</div>
+
+<!-- Capacity defaults + stats -->
+{% set n_onsite = classes | selectattr('modality','eq','onsite') | list | length %}
+{% set n_online = classes | selectattr('modality','eq','online') | list | length %}
+{% set n_mini   = classes | selectattr('modality','eq','mini')   | list | length %}
+{% set n_sat = classes | selectattr('schedule_day','eq','SAT') | list | length %}
+{% set n_sun = classes | selectattr('schedule_day','eq','SUN') | list | length %}
+{% set n_am   = namespace(v=0) %}
+{% set n_noon = namespace(v=0) %}
+{% set n_pm   = namespace(v=0) %}
+{% set n_eve  = namespace(v=0) %}
+{% for cls in classes %}
+  {% if cls.schedule_time.hour < 12 %}{% set n_am.v   = n_am.v   + 1 %}
+  {% elif cls.schedule_time.hour < 15 %}{% set n_noon.v = n_noon.v + 1 %}
+  {% elif cls.schedule_time.hour < 17 %}{% set n_pm.v   = n_pm.v   + 1 %}
+  {% else %}{% set n_eve.v = n_eve.v + 1 %}{% endif %}
+{% endfor %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <div class="d-flex gap-4 flex-wrap" style="line-height:1.4">
+        <div>
+          <div class="text-muted small mb-1">授课方式</div>
+          <div class="d-flex gap-3">
+            <span class="text-nowrap"><span class="text-muted small">实体</span> <span class="fw-bold">{{ n_onsite }}</span></span>
+            <span class="text-nowrap"><span class="text-muted small">网课</span> <span class="fw-bold">{{ n_online }}</span></span>
+            <span class="text-nowrap"><span class="text-muted small">迷你</span> <span class="fw-bold">{{ n_mini }}</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-muted small mb-1">上课日</div>
+          <div class="d-flex gap-3">
+            <span class="text-nowrap"><span class="text-muted small">周六</span> <span class="fw-bold">{{ n_sat }}</span></span>
+            <span class="text-nowrap"><span class="text-muted small">周日</span> <span class="fw-bold">{{ n_sun }}</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-muted small mb-1">时段</div>
+          <div class="d-flex gap-3">
+            <span class="text-nowrap"><span class="text-muted small">上午</span> <span class="fw-bold">{{ n_am.v }}</span></span>
+            <span class="text-nowrap"><span class="text-muted small">中午</span> <span class="fw-bold">{{ n_noon.v }}</span></span>
+            <span class="text-nowrap"><span class="text-muted small">下午</span> <span class="fw-bold">{{ n_pm.v }}</span></span>
+            {% if n_eve.v %}<span class="text-nowrap"><span class="text-muted small">晚上</span> <span class="fw-bold">{{ n_eve.v }}</span></span>{% endif %}
+          </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+<form method="get" action="/admin/classes" class="d-flex gap-2 flex-wrap align-items-center mb-3">
+  <input type="text" name="f_search" class="form-control form-control-sm" placeholder="班级名称" value="{{ f_search }}" style="width:130px">
+  <select name="f_modality" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部授课方式</option>
+    <option value="onsite" {% if f_modality=='onsite' %}selected{% endif %}>实体</option>
+    <option value="online" {% if f_modality=='online' %}selected{% endif %}>网课</option>
+    <option value="mini"   {% if f_modality=='mini'   %}selected{% endif %}>迷你</option>
+  </select>
+  <select name="f_day" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部上课日</option>
+    <option value="SAT" {% if f_day=='SAT' %}selected{% endif %}>周六</option>
+    <option value="SUN" {% if f_day=='SUN' %}selected{% endif %}>周日</option>
+  </select>
+  <select name="f_status" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部状态</option>
+    <option value="open"     {% if f_status=='open'     %}selected{% endif %}>开放</option>
+    <option value="full"     {% if f_status=='full'     %}selected{% endif %}>满员</option>
+    <option value="overflow" {% if f_status=='overflow' %}selected{% endif %}>超员</option>
+    <option value="closed"   {% if f_status=='closed'   %}selected{% endif %}>关闭</option>
+  </select>
+  <select name="f_material" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部教材</option>
+    {% for m in all_material_names %}
+      <option value="{{ m }}" {% if f_material == m %}selected{% endif %}>{{ m }}</option>
+    {% endfor %}
+  </select>
+  <select name="f_teacher" class="form-select form-select-sm" style="width:auto">
+    <option value="">全部教师</option>
+    {% for t in all_teacher_names %}
+      <option value="{{ t }}" {% if f_teacher == t %}selected{% endif %}>{{ t }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-outline-secondary btn-sm">筛选</button>
+  {% if f_search or f_modality or f_day or f_status or f_material or f_teacher %}
+    <a href="/admin/classes" class="btn btn-outline-secondary btn-sm">清除</a>
+  {% endif %}
+</form>
+
+<div class="table-card">
+  <div class="card-header">
+    {% if semester %}当前学期：{{ semester.name }}{% endif %}
+    （共 {{ classes | length }} 个班级）
+    <small class="text-muted ms-2">点击列标题排序</small>
+  </div>
+  <table class="table table-hover align-middle mb-0" id="classTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0">班级名称 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1">级别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2">上课安排 <span class="sort-icon">⇅</span></th>
+        <th>教材</th>
+        <th>教师</th>
+        <th class="sortable" data-col="5">实际人数 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="6">容量 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="7">状态 <span class="sort-icon">⇅</span></th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cls in classes %}
+      {% set enrolled = enrolled_counts.get(cls.id, 0) %}
+      {% set day_label = '周六' if cls.schedule_day == 'SAT' else '周日' %}
+      {% set modality_label = '实体' if cls.modality == 'onsite' else ('迷你' if cls.modality == 'mini' else '网课') %}
+      <tr>
+        <td class="fw-medium">{{ cls.name }}</td>
+        <td data-sort="{{ cls.level }}"><span class="badge bg-secondary">L{{ cls.level }}</span></td>
+        <td data-sort="{{ cls.schedule_day }}{{ cls.schedule_time }}">
+          <small>{{ day_label }} {{ cls.schedule_time.strftime('%H:%M') }} {{ modality_label }}</small>
+        </td>
+        <td>
+          {% for cm in cls.class_materials %}
+            <span class="badge bg-light text-dark border me-1">{{ cm.material.name if cm.material }}</span>
+          {% endfor %}
+        </td>
+        <td>
+          {% for ct in cls.class_teachers %}
+            <span class="me-1">{{ ct.teacher.name if ct.teacher }}</span>
+          {% endfor %}
+        </td>
+        <td data-sort="{{ enrolled }}">
+          <span class="{% if enrolled >= cls.capacity %}text-danger fw-bold{% elif enrolled >= cls.capacity * 0.8 %}text-warning fw-bold{% endif %}">
+            {{ enrolled }}
+          </span>
+        </td>
+        <td data-sort="{{ cls.capacity }}">{{ cls.capacity }}</td>
+        <td>
+          {% if cls.status == 'overflow' or enrolled > cls.overflow_cap %}
+            <span class="badge text-white" style="background:#dc3545">超员</span>
+          {% elif cls.status == 'full' or enrolled >= cls.capacity %}
+            <span class="badge text-dark" style="background:#fdce14">满员</span>
+          {% elif cls.status == 'closed' %}
+            <span class="badge bg-secondary">关闭</span>
+          {% else %}
+            <span class="badge bg-success">开放</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/admin/classes/{{ cls.id }}/edit" class="btn btn-sm btn-outline-secondary">编辑</a>
+          <form method="post" action="/admin/classes/{{ cls.id }}/delete" class="d-inline"
+                onsubmit="return confirm('确认删除班级 {{ cls.name }}？')">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted py-4">暂无班级</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  const table = document.getElementById('classTable');
+  let sortCol = -1, sortAsc = true;
+
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+      sortTable(col, sortAsc);
+      table.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.textContent = '⇅');
+      th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+    });
+  });
+
+  function sortTable(col, asc) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 1);
+    rows.sort((a, b) => {
+      const cellA = a.cells[col];
+      const cellB = b.cells[col];
+      const va = (cellA.dataset.sort ?? cellA.textContent).trim();
+      const vb = (cellB.dataset.sort ?? cellB.textContent).trim();
+      const na = parseFloat(va), nb = parseFloat(vb);
+      const cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : va.localeCompare(vb, 'zh');
+      return asc ? cmp : -cmp;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+})();
+</script>
+{% endblock %}

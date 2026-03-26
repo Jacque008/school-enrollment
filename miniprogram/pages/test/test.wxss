@@ -1,0 +1,29 @@
+.container { padding: 40rpx; min-height: 100vh; background: #f7f7f7; }
+.center { display: flex; flex-direction: column; align-items: center; padding-top: 200rpx; }
+.error { color: #c0392b; }
+
+.progress-bar { height: 8rpx; background: #e0e0e0; border-radius: 4rpx; margin-bottom: 12rpx; }
+.progress-fill { height: 100%; background: #c0392b; border-radius: 4rpx; transition: width 0.3s; }
+.progress-text { font-size: 26rpx; color: #999; text-align: center; display: block; margin-bottom: 60rpx; }
+
+.test-area { display: flex; flex-direction: column; align-items: center; }
+.char-card {
+  width: 400rpx; height: 400rpx;
+  background: white; border-radius: 24rpx;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.1);
+  margin-bottom: 50rpx;
+}
+.char-display { font-size: 160rpx; color: #333; }
+.hint { font-size: 30rpx; color: #666; margin-bottom: 60rpx; }
+
+.btn-row { display: flex; gap: 40rpx; width: 100%; }
+.btn-unknown { flex: 1; background: #f0f0f0; color: #666; border-radius: 16rpx; font-size: 34rpx; height: 100rpx; line-height: 100rpx; }
+.btn-know { flex: 1; background: #27ae60; color: white; border-radius: 16rpx; font-size: 34rpx; height: 100rpx; line-height: 100rpx; }
+
+.result-preview, .result-final { text-align: center; padding-top: 120rpx; }
+.result-title { font-size: 48rpx; font-weight: bold; color: #333; display: block; margin-bottom: 30rpx; }
+.result-stat { font-size: 36rpx; color: #c0392b; display: block; margin-bottom: 60rpx; }
+.result-sub { font-size: 28rpx; color: #999; display: block; }
+.btn-submit { background: #c0392b; color: white; border-radius: 16rpx; font-size: 34rpx; }
+.btn-skip { background: #f0f0f0; color: #666; border-radius: 12rpx; font-size: 30rpx; margin-top: 30rpx; }

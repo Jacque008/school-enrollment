@@ -1,0 +1,45 @@
+<view class="container">
+  <!-- Loading -->
+  <view wx:if="{{loading}}" class="center">
+    <text>加载中...</text>
+  </view>
+
+  <!-- Error -->
+  <view wx:elif="{{error}}" class="center error">
+    <text>{{error}}</text>
+    <button bindtap="onSkipToResult" class="btn-skip">跳过测试，查看分班建议</button>
+  </view>
+
+  <!-- Test in progress -->
+  <view wx:elif="{{!finished}}" class="test-area">
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{(currentIndex / characters.length) * 100}}%"></view>
+    </view>
+    <text class="progress-text">{{currentIndex + 1}} / {{characters.length}}</text>
+
+    <view class="char-card">
+      <text class="char-display">{{characters[currentIndex]}}</text>
+    </view>
+
+    <text class="hint">孩子认识这个字/词吗？</text>
+
+    <view class="btn-row">
+      <button class="btn-unknown" bindtap="onUnknow">不认识</button>
+      <button class="btn-know" bindtap="onKnow">认识</button>
+    </view>
+  </view>
+
+  <!-- Finished - show score before submit -->
+  <view wx:elif="{{finished && !result}}" class="result-preview">
+    <text class="result-title">测试完成！</text>
+    <text class="result-stat">认识 {{recognized.length}} / {{characters.length}} 个字</text>
+    <button class="btn-submit" loading="{{submitting}}" bindtap="onSubmit">提交并查看分班建议</button>
+  </view>
+
+  <!-- Submitted - show score -->
+  <view wx:elif="{{result}}" class="result-final">
+    <text class="result-title">提交成功</text>
+    <text class="result-stat">识字率：{{result.score_percent}}%</text>
+    <text class="result-sub">正在跳转到分班建议...</text>
+  </view>
+</view>

@@ -1,0 +1,124 @@
+{% extends "admin/base.html" %}
+{% block title %}教师管理 - 行知学堂{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h4 class="mb-0 fw-bold">教师管理</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ 添加教师</button>
+</div>
+
+<div class="table-card">
+  <table class="table table-hover align-middle mb-0" id="sortTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0" style="cursor:pointer;user-select:none">姓名 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="1" style="cursor:pointer;user-select:none">性别 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="2" style="cursor:pointer;user-select:none">邮箱 <span class="sort-icon">⇅</span></th>
+        <th class="sortable" data-col="3" style="cursor:pointer;user-select:none">手机 <span class="sort-icon">⇅</span></th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in teachers %}
+      <tr>
+        <td class="fw-medium">{{ t.name }}</td>
+        <td data-sort="{{ t.gender or '' }}">
+          {% if t.gender == 'male' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">男</span>
+          {% elif t.gender == 'female' %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">女</span>
+          {% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td class="text-muted">{{ t.email or '—' }}</td>
+        <td class="text-muted">{{ t.phone or '—' }}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal" data-bs-target="#editModal{{ t.id }}">编辑</button>
+          <form method="post" action="/admin/teachers/{{ t.id }}/delete" class="d-inline"
+                onsubmit="return confirm('确认删除教师 {{ t.name }}？')">
+            <button class="btn btn-sm btn-outline-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+
+      <div class="modal fade" id="editModal{{ t.id }}" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+          <form method="post" action="/admin/teachers/{{ t.id }}/edit">
+            <div class="modal-header"><h5 class="modal-title">编辑教师</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <div class="mb-3"><label class="form-label">姓名 *</label>
+                <input type="text" name="name" class="form-control" required value="{{ t.name }}"></div>
+              <div class="mb-3"><label class="form-label">性别</label>
+                <select name="gender" class="form-select">
+                  <option value="">—</option>
+                  <option value="male" {% if t.gender == 'male' %}selected{% endif %}>男</option>
+                  <option value="female" {% if t.gender == 'female' %}selected{% endif %}>女</option>
+                </select>
+              </div>
+              <div class="mb-3"><label class="form-label">邮箱</label>
+                <input type="email" name="email" class="form-control" value="{{ t.email or '' }}"></div>
+              <div class="mb-3"><label class="form-label">手机</label>
+                <input type="text" name="phone" class="form-control" value="{{ t.phone or '' }}"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div></div>
+      </div>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">暂无教师</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="post" action="/admin/teachers/new">
+      <div class="modal-header"><h5 class="modal-title">添加教师</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">姓名 *</label>
+          <input type="text" name="name" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">性别</label>
+          <select name="gender" class="form-select">
+            <option value="">—</option>
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </div>
+        <div class="mb-3"><label class="form-label">邮箱</label>
+          <input type="email" name="email" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">手机</label>
+          <input type="text" name="phone" class="form-control"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">添加</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+
+<script>
+(function(){
+  const t=document.getElementById('sortTable');let sc=-1,sa=true;
+  t.querySelectorAll('th.sortable').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const col=parseInt(th.dataset.col);
+      if(sc===col){sa=!sa;}else{sc=col;sa=true;}
+      const tb=t.querySelector('tbody');
+      const rows=Array.from(tb.querySelectorAll('tr')).filter(r=>r.cells.length>1);
+      rows.sort((a,b)=>{
+        const va=(a.cells[col].dataset.sort??a.cells[col].textContent).trim();
+        const vb=(b.cells[col].dataset.sort??b.cells[col].textContent).trim();
+        const na=parseFloat(va),nb=parseFloat(vb);
+        const c=(!isNaN(na)&&!isNaN(nb))?na-nb:va.localeCompare(vb,'zh');
+        return sa?c:-c;
+      });
+      rows.forEach(r=>tb.appendChild(r));
+      t.querySelectorAll('th.sortable .sort-icon').forEach(ic=>ic.textContent='⇅');
+      th.querySelector('.sort-icon').textContent=sa?'↑':'↓';
+    });
+  });
+})();
+</script>
+{% endblock %}
